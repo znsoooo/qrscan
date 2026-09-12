@@ -42,11 +42,21 @@ import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
 
+import android.content.Intent;
+import android.net.Uri;
+import android.util.Base64;
+
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends Activity {
     private static final int REQ_CAM = 1;
+    private static final int REQ_SAVE = 1001;
     private static final long DECODE_INTERVAL_MS = 120; // 解码节流
     private static final int MAX_W = 1920;             // 取帧分辨率上限（大码也能识别）
 
@@ -71,6 +81,8 @@ public class MainActivity extends Activity {
     private final QRCodeReader qrReader = new QRCodeReader();
     private String lastRaw = null;
     private long lastDecodeTime = 0;
+    private String pendingFileName = null;   // 转换成功待保存的文件名
+    private byte[] pendingData = null;       // 转换成功待保存的内容
     private final Runnable hideOverlay = new Runnable() {
         @Override
         public void run() {
@@ -134,7 +146,7 @@ public class MainActivity extends Activity {
         btnConvert.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // TODO: 转换功能待实现
+                doConvert();
             }
         });
 
@@ -478,6 +490,131 @@ public class MainActivity extends Activity {
             }
         }
         return nv21;
+    }
+
+    // ===== 转换功能 =====
+    // 参考 Python：按 `page/total:text` 协议重组并 base64 解码，成功则弹出选择保存路径。
+    // 返回非 null 字符串 = 转换失败原因（需 Toast 提示）；返回 null = 成功 / 无需提示。
+    private void doConvert() {
+        String data = result.getText().toString()
+                .replace(" ", "").replace("\r", "").replace("\n", "");
+        while (data.endsWith(",")) {
+            data = data.substring(0, data.length() - 1);
+        }
+        if (data.isEmpty()) {
+            Toast.makeText(this, "文本框为空，无可转换内容", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String err = parseAndDecode(data); // null 表示成功（已就绪 pendingData/pendingFileName）
+        if (err != null) {
+            Toast.makeText(this, err, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // 成功：弹出系统文件保存选择器（对应 Python 的 open(file,'wb')）
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_TITLE, sanitizeFileName(pendingFileName));
+        startActivityForResult(intent, REQ_SAVE);
+    }
+
+    // 解析并 base64 解码；返回错误原因字符串，或成功时返回 null（并填充 pending 数据）
+    private String parseAndDecode(String data) {
+        String[] parts = data.split(",", -1);
+        int total;
+        try {
+            total = splitTotal(parts[0]);
+        } catch (Exception e) {
+            return null; // 对齐 Python：解析异常 return（None，无需提示）
+        }
+
+        Map<Integer, String> map = new HashMap<>();
+        try {
+            for (String part : parts) {
+                int[] sp = splitPart(part);
+                if (total != sp[1]) {
+                    return null; // 对齐 Python：total 不一致 return（None）
+                }
+                map.put(sp[0], splitText(part));
+            }
+        } catch (Exception e) {
+            return null; // 对齐 Python：解析异常 return（None，无需提示）
+        }
+
+        // 检查缺失编号
+        List<Integer> missing = new ArrayList<>();
+        for (int i = 1; i <= total; i++) {
+            if (!map.containsKey(i)) missing.add(i);
+        }
+        if (!missing.isEmpty()) {
+            return "缺失编号: " + missing.toString();
+        }
+
+        // 按页拼接
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= total; i++) sb.append(map.get(i));
+        String text = sb.toString();
+
+        int idx = text.indexOf(':');
+        if (idx < 0) {
+            return "解码失败: 缺少文件名字段";
+        }
+        String file = text.substring(0, idx);
+        String content = text.substring(idx + 1).replace('_', '/');
+        while (content.length() % 4 != 0) content += "=";
+
+        byte[] decoded;
+        try {
+            decoded = Base64.decode(content, Base64.DEFAULT);
+        } catch (Exception e) {
+            return "解码失败: " + e.getMessage();
+        }
+
+        pendingFileName = file;
+        pendingData = decoded;
+        return null; // 成功
+    }
+
+    private int splitTotal(String part) {
+        String header = part.substring(0, part.indexOf(':'));
+        return Integer.parseInt(header.split("/", 2)[1]);
+    }
+
+    private int[] splitPart(String part) {
+        String header = part.substring(0, part.indexOf(':'));
+        String[] ht = header.split("/", 2);
+        return new int[]{ Integer.parseInt(ht[0]), Integer.parseInt(ht[1]) };
+    }
+
+    private String splitText(String part) {
+        return part.substring(part.indexOf(':') + 1);
+    }
+
+    private String sanitizeFileName(String file) {
+        int s = Math.max(file.lastIndexOf('/'), file.lastIndexOf('\\'));
+        return s >= 0 ? file.substring(s + 1) : file;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_SAVE) {
+            if (resultCode == Activity.RESULT_OK && data != null && pendingData != null) {
+                Uri uri = data.getData();
+                if (uri != null) {
+                    try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+                        if (os != null) os.write(pendingData);
+                        // 成功（语义等同返回 null）：按需求不弹提示，保存对话框本身已是反馈
+                    } catch (Exception e) {
+                        Toast.makeText(this, "保存失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+            pendingData = null;
+            pendingFileName = null;
+        }
     }
 
     private void closeCamera() {
