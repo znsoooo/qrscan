@@ -4,14 +4,17 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#f2f3f5"
-    android:padding="12dp">
+    android:paddingLeft="12dp"
+    android:paddingRight="12dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="12dp">
 
-    <!-- 方形摄像头预览容器 -->
+    <!-- 方形摄像头预览容器：圆角、画面铺满 -->
     <FrameLayout
         android:id="@+id/previewContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#000000"
+        android:background="@drawable/bg_preview"
         android:layout_marginBottom="12dp">
 
         <TextureView
@@ -27,8 +30,11 @@
             android:layout_gravity="top|center_horizontal"
             android:layout_marginTop="10dp"
             android:maxWidth="320dp"
-            android:padding="8dp"
-            android:background="#CC1F2129"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingTop="7dp"
+            android:paddingBottom="7dp"
+            android:background="@drawable/bg_overlay"
             android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:visibility="invisible" />
@@ -40,8 +46,10 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:background="#FFFFFF"
-        android:padding="12dp">
+        android:background="@drawable/bg_result"
+        android:padding="14dp"
+        android:fillViewport="true"
+        android:scrollbars="vertical">
 
         <TextView
             android:id="@+id/result"
@@ -50,44 +58,78 @@
             android:textSize="15sp"
             android:textColor="#1D2129"
             android:lineSpacingExtra="4dp"
-            android:textIsSelectable="true"
-            android:scrollbars="vertical" />
+            android:textIsSelectable="true" />
     </ScrollView>
+
+    <!-- 总字数提示 -->
+    <TextView
+        android:id="@+id/tvCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="2dp"
+        android:text="总字数：0"
+        android:textColor="#86909C"
+        android:textSize="13sp" />
 
     <!-- 按钮行：复制 / 转换 / 清空 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="12dp">
+        android:layout_marginTop="8dp">
 
         <Button
             android:id="@+id/btnCopy"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:layout_marginEnd="6dp"
+            android:background="@drawable/btn_primary"
             android:text="复制"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null" />
 
         <Button
             android:id="@+id/btnConvert"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:layout_marginStart="6dp"
             android:layout_marginEnd="6dp"
+            android:background="@drawable/btn_secondary"
             android:text="转换"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="#1D2129"
+            android:textSize="14sp"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null" />
 
         <Button
             android:id="@+id/btnClear"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:layout_marginStart="6dp"
+            android:background="@drawable/btn_secondary"
             android:text="清空"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="#1D2129"
+            android:textSize="14sp"
+            android:paddingLeft="0dp"
+            android:paddingRight="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:stateListAnimator="@null" />
     </LinearLayout>
 
 </LinearLayout>

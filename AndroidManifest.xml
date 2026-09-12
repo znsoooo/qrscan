@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.qrscan"
-    android:versionCode="1"
-    android:versionName="1.0">
+    android:versionCode="2"
+    android:versionName="1.1">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
 
@@ -12,7 +12,8 @@
 
     <application
         android:allowBackup="true"
-        android:label="二维码扫码工具"
+        android:icon="@mipmap/ic_launcher"
+        android:label="连续扫码"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
         <activity

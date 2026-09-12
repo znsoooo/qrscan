@@ -1,6 +1,6 @@
-# QRScan 扫码 APK
+# 连续扫码 APK
 
-基于 **Camera2 + ZXing** 实现的原生 Android 二维码扫码工具，无网络可用。
+基于 **Camera2 + ZXing** 实现的原生 Android 二维码扫码工具，无网络可用。应用名为「**连续扫码**」。
 
 ## 功能特性
 
@@ -8,8 +8,9 @@
 - 方形预览窗口，画面居中裁切。
 - 持续扫描，窗口不关闭，识别到的文本追加在文本框尾部。
 - 与上次识别内容完全一致时跳过。
-- 预览上方弹窗显示 `识别内容: XXXX`，其中 XXXX 为识别文本后 strip 后取前20个字符。
+- 预览上方弹窗显示 `识别内容: XXXX…`，其中 XXXX 为识别文本后 strip 并替换折行后取前 6 个字符。
 - 结果区为只读可选取文本。
+- 结果区下方提示总字数，随内容实时更新。
 - 底部3个按钮：复制 / 转换 / 清空。
 
 ## 目录结构
@@ -21,6 +22,8 @@ apk-build/
 ├── AndroidManifest.xml           # 清单：CAMERA 权限、非全屏主题、启动 Activity
 ├── libs/zxing-core.jar           # ZXing 解码依赖库（构建必需，已入库）
 ├── res/layout/activity_main.xml  # 布局：方形预览 + 顶部弹窗 + 文本区 + 按钮行
+├── res/drawable/*.xml            # 样式资源：预览圆角、结果框蓝边圆角、按钮蓝/浅配色、弹窗圆角
+├── res/mipmap-*/ic_launcher.png  # 应用图标（mdpi ~ xxxhdpi 五档密度）
 ├── build_apk.sh                  # 打包脚本：aapt2 编译链接 → javac/d8 → zipalign → 签名
 ├── setup_sdk.sh                  # 首次构建前安装 Android SDK（build-tools;34 + platforms;android-34）
 └── README.md                     # 自述文档

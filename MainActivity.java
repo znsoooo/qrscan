@@ -6,6 +6,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -19,6 +20,7 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -27,6 +29,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewTreeObserver;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
@@ -50,6 +53,7 @@ public class MainActivity extends Activity {
     private TextureView textureView;
     private TextView overlay;
     private TextView result;
+    private TextView tvCount;
     private ScrollView scrollResult;
     private FrameLayout previewContainer;
 
@@ -79,11 +83,22 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // 沉浸式浅色状态栏：与应用底色一致，时间/图标用深色
+        Window window = getWindow();
+        window.setStatusBarColor(Color.parseColor("#f2f3f5"));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
+
         previewContainer = findViewById(R.id.previewContainer);
         textureView = findViewById(R.id.preview);
         overlay = findViewById(R.id.overlay);
         result = findViewById(R.id.result);
         scrollResult = findViewById(R.id.scrollResult);
+        tvCount = findViewById(R.id.tvCount);
+
+        // 让预览画面按背景圆角剪裁
+        previewContainer.setClipToOutline(true);
 
         // 预览容器裁成正方形
         previewContainer.getViewTreeObserver().addOnGlobalLayoutListener(
@@ -128,6 +143,7 @@ public class MainActivity extends Activity {
             public void onClick(View v) {
                 result.setText("");
                 lastRaw = null;
+                updateCount();
                 Toast.makeText(MainActivity.this, "已清空", Toast.LENGTH_SHORT).show();
             }
         });
@@ -325,21 +341,26 @@ public class MainActivity extends Activity {
     private void configureTransform(int viewW, int viewH) {
         if (textureView == null || previewSize == null || viewW == 0 || viewH == 0) return;
         int rotation = getWindowManager().getDefaultDisplay().getRotation();
+
+        // 屏幕旋转到 90/270 时，buffer 需按旋转后的宽高处理
+        boolean rotated = (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270);
+        float bufW = rotated ? previewSize.getHeight() : previewSize.getWidth();
+        float bufH = rotated ? previewSize.getWidth() : previewSize.getHeight();
+
+        float cx = viewW / 2f;
+        float cy = viewH / 2f;
+
         Matrix matrix = new Matrix();
         RectF viewRect = new RectF(0, 0, viewW, viewH);
-        RectF bufferRect = new RectF(0, 0, previewSize.getHeight(), previewSize.getWidth());
-        float cx = viewRect.centerX();
-        float cy = viewRect.centerY();
-        if (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
-            bufferRect.offset(cx - bufferRect.centerX(), cy - bufferRect.centerY());
-            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
-            float scale = Math.max((float) viewH / previewSize.getHeight(), (float) viewW / previewSize.getWidth());
-            matrix.postScale(scale, scale, cx, cy);
+        RectF bufferRect = new RectF(0, 0, bufW, bufH);
+        bufferRect.offset(cx - bufferRect.centerX(), cy - bufferRect.centerY());
+
+        // 先抵消 TextureView 的默认拉伸，再等比放大到覆盖控件（center-crop：铺满、无黑边、不变形）
+        matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+        float scale = Math.max(viewH / bufH, viewW / bufW);
+        matrix.postScale(scale, scale, cx, cy);
+        if (rotated) {
             matrix.postRotate(90 * (rotation - 2), cx, cy);
-        } else {
-            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
-            float scale = Math.max((float) viewW / previewSize.getWidth(), (float) viewH / previewSize.getHeight());
-            matrix.postScale(scale, scale, cx, cy);
         }
         textureView.setTransform(matrix);
     }
@@ -378,7 +399,7 @@ public class MainActivity extends Activity {
             };
 
     private void handleResult(final String text) {
-        final String display = text.trim().length() > 20 ? text.trim().substring(0, 20) : text.trim();
+        final String display = buildOverlayText(text);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -392,6 +413,7 @@ public class MainActivity extends Activity {
                 }
                 lastRaw = text;
                 result.append(text); // 不 strip、不加换行，直接追加
+                updateCount();
                 scrollResult.post(new Runnable() {
                     @Override
                     public void run() {
@@ -400,6 +422,18 @@ public class MainActivity extends Activity {
                 });
             }
         });
+    }
+
+    // 弹窗文案：strip → 连续空白折叠为一个空格 → 取前 6 个字符 + 省略号
+    private String buildOverlayText(String text) {
+        String normalized = text.trim().replaceAll("\\s+", " ");
+        String head = normalized.length() > 6 ? normalized.substring(0, 6) : normalized;
+        return head + "…";
+    }
+
+    // 更新“总字数：XXX”
+    private void updateCount() {
+        tvCount.setText("总字数：" + result.getText().length());
     }
 
     // 将 YUV_420_888 转为 NV21（ZXing PlanarYUVLuminanceSource 所需布局）
