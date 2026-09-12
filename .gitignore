@@ -1,0 +1,12 @@
+# 构建中间产物
+/out/
+/dexout/
+/compiled/
+/gen/
+aligned.apk
+base.apk
+unsigned.apk
+*.idsig
+
+# 签名密钥
+debug.keystore
