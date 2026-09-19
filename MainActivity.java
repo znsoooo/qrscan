@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.ActivityNotFoundException;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -492,9 +493,13 @@ public class MainActivity extends Activity {
         return nv21;
     }
 
+    // 转换解析函数返回此哨兵表示“非合法分片协议，静默忽略（不弹提示也不再继续保存）”
+    private static final String SILENT = "\u0000SILENT\u0000";
+
     // ===== 转换功能 =====
     // 参考 Python：按 `page/total:text` 协议重组并 base64 解码，成功则弹出选择保存路径。
-    // 返回非 null 字符串 = 转换失败原因（需 Toast 提示）；返回 null = 成功 / 无需提示。
+    // 返回 null = 成功（已就绪 pendingData/pendingFileName）；返回 SILENT = 静默忽略；
+    // 返回其它字符串 = 转换失败原因（弹 Toast 提示）。
     private void doConvert() {
         String data = result.getText().toString()
                 .replace(" ", "").replace("\r", "").replace("\n", "");
@@ -508,7 +513,9 @@ public class MainActivity extends Activity {
 
         String err = parseAndDecode(data); // null 表示成功（已就绪 pendingData/pendingFileName）
         if (err != null) {
-            Toast.makeText(this, err, Toast.LENGTH_LONG).show();
+            if (!SILENT.equals(err)) {
+                Toast.makeText(this, err, Toast.LENGTH_LONG).show();
+            }
             return;
         }
 
@@ -517,7 +524,11 @@ public class MainActivity extends Activity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
         intent.putExtra(Intent.EXTRA_TITLE, sanitizeFileName(pendingFileName));
-        startActivityForResult(intent, REQ_SAVE);
+        try {
+            startActivityForResult(intent, REQ_SAVE);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "无法保存", Toast.LENGTH_LONG).show();
+        }
     }
 
     // 解析并 base64 解码；返回错误原因字符串，或成功时返回 null（并填充 pending 数据）
@@ -527,7 +538,7 @@ public class MainActivity extends Activity {
         try {
             total = splitTotal(parts[0]);
         } catch (Exception e) {
-            return null; // 对齐 Python：解析异常 return（None，无需提示）
+            return SILENT; // 对齐 Python：解析异常 return（None，无需提示）
         }
 
         Map<Integer, String> map = new HashMap<>();
@@ -535,12 +546,12 @@ public class MainActivity extends Activity {
             for (String part : parts) {
                 int[] sp = splitPart(part);
                 if (total != sp[1]) {
-                    return null; // 对齐 Python：total 不一致 return（None）
+                    return SILENT; // 对齐 Python：total 不一致 return（None）
                 }
                 map.put(sp[0], splitText(part));
             }
         } catch (Exception e) {
-            return null; // 对齐 Python：解析异常 return（None，无需提示）
+            return SILENT; // 对齐 Python：解析异常 return（None，无需提示）
         }
 
         // 检查缺失编号
