@@ -32,6 +32,7 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -65,6 +66,7 @@ public class MainActivity extends Activity {
     private TextView overlay;
     private TextView result;
     private TextView tvCount;
+    private CheckBox addNewline;
     private ScrollView scrollResult;
     private FrameLayout previewContainer;
 
@@ -109,6 +111,7 @@ public class MainActivity extends Activity {
         result = findViewById(R.id.result);
         scrollResult = findViewById(R.id.scrollResult);
         tvCount = findViewById(R.id.tvCount);
+        addNewline = findViewById(R.id.cbAddNewline);
 
         // 让预览画面按背景圆角剪裁
         previewContainer.setClipToOutline(true);
@@ -425,7 +428,11 @@ public class MainActivity extends Activity {
                     return; // 与上次完全一致，跳过追加
                 }
                 lastRaw = text;
-                result.append(text); // 不 strip、不加换行，直接追加
+                // 勾选“添加换行”且结果区已有内容时，先在两次结果之间补一个换行
+                if (addNewline.isChecked() && result.length() > 0) {
+                    result.append("\n");
+                }
+                result.append(text); // 不 strip，直接追加（换行仅在勾选时额外插入）
                 updateCount();
                 scrollResult.post(new Runnable() {
                     @Override
