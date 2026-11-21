@@ -28,7 +28,7 @@ $AAPT2 link -o $SRC/base.apk \
 
 echo "==> 3) 编译 Java（含 R.java 与 ZXing）"
 javac -cp "$PLATFORM/android.jar:$ZXING" -d $SRC/out \
-  $SRC/MainActivity.java $SRC/gen/com/example/qrscan/R.java
+  $SRC/MainActivity.java $SRC/gen/com/znsoooo/qrscan/R.java
 
 echo "==> 4) 生成 classes.dex（含 ZXing）"
 CLASSES=$(find $SRC/out -name '*.class')

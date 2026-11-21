@@ -1,4 +1,4 @@
-package com.example.qrscan;
+package com.znsoooo.qrscan;
 
 import android.Manifest;
 import android.app.Activity;
