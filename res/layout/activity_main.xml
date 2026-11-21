@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.znsoooo.qrscan.AdaptiveLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -9,11 +10,12 @@
     android:paddingTop="6dp"
     android:paddingBottom="12dp">
 
-    <!-- 方形摄像头预览容器：圆角、画面铺满 -->
+    <!-- 摄像头预览容器：高度由代码动态分配；画面按正方形裁切，容器变矮时底部被裁剪 -->
     <FrameLayout
         android:id="@+id/previewContainer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="300dp"
+        android:clipChildren="true"
         android:background="@drawable/bg_preview"
         android:layout_marginBottom="12dp">
 
@@ -40,12 +42,11 @@
             android:visibility="invisible" />
     </FrameLayout>
 
-    <!-- 识别结果：只读、可长按选取、不弹键盘 -->
+    <!-- 识别结果：只读、可长按选取、不弹键盘；高度由代码动态分配（最小 120dp） -->
     <ScrollView
         android:id="@+id/scrollResult"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="160dp"
         android:background="@drawable/bg_result"
         android:padding="14dp"
         android:fillViewport="true"
@@ -63,6 +64,7 @@
 
     <!-- 总字数提示 + 添加换行复选框（右对齐） -->
     <LinearLayout
+        android:id="@+id/countRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -96,6 +98,7 @@
 
     <!-- 按钮行：复制 / 转换 / 清空 -->
     <LinearLayout
+        android:id="@+id/buttonRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -154,4 +157,4 @@
             android:stateListAnimator="@null" />
     </LinearLayout>
 
-</LinearLayout>
+</com.znsoooo.qrscan.AdaptiveLayout>

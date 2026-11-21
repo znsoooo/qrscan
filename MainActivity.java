@@ -116,18 +116,15 @@ public class MainActivity extends Activity {
         // 让预览画面按背景圆角剪裁
         previewContainer.setClipToOutline(true);
 
-        // 预览容器裁成正方形
-        previewContainer.getViewTreeObserver().addOnGlobalLayoutListener(
-                new ViewTreeObserver.OnGlobalLayoutListener() {
-                    @Override
-                    public void onGlobalLayout() {
-                        int w = previewContainer.getWidth();
-                        if (w > 0 && previewContainer.getHeight() != w) {
-                            previewContainer.getLayoutParams().height = w;
-                            previewContainer.requestLayout();
-                        }
-                    }
-                });
+        // 高度分配已交给自定义根布局 AdaptiveLayout 在 measure 阶段完成。
+        // 这里仅在 TextureView 尺寸变化时重算相机画面的正方形裁切矩阵。
+        textureView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom,
+                                       int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                configureTransform(textureView.getWidth(), textureView.getHeight());
+            }
+        });
 
         Button btnCopy = findViewById(R.id.btnCopy);
         Button btnConvert = findViewById(R.id.btnConvert);
